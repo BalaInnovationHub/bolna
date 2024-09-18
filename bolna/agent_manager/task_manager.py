@@ -1730,7 +1730,12 @@ class TaskManager(BaseManager):
 
                     num_chunks = 0
                     self.turn_id +=1
-                    if not self.first_message_passed and self.first_message_sent and self.synthesizer_queue.empty(): # only true when the first message is completly sent
+
+                    if not self.first_message_passed and self.first_message_sent: # only true when the first message is completly sent
+                        while not self.buffered_output_queue.empty():
+                            logger.info("Waiting for the synthesizer queue to empty")
+                            await asyncio.sleep(0.1)  # Sleep for a short duration before checking again
+            
                         self.first_message_passed = True
                         logger.info(f"Making first message passed as True")
                         self.first_message_passing_time = time.time()
@@ -1817,7 +1822,6 @@ class TaskManager(BaseManager):
                         await self._synthesize(create_ws_data_packet(text, meta_info=meta_info))
 
                         # If this doesn't work, we need to make sure the syntehesizer pass the agentic message text
-
                         self.first_message_sent = True
                         break
                     else:
