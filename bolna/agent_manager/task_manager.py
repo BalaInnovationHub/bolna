@@ -1179,6 +1179,11 @@ class TaskManager(BaseManager):
 
             await self.__do_llm_generation(messages, meta_info, next_step, should_bypass_synth)
             # TODO : Write a better check for completion prompt
+            
+            agent_type = self.task_config["tools_config"]["llm_agent"].get("agent_type", None)
+            if agent_type in ["knowledgebase_agent", "graph_agent"]:
+                return
+
             if self.use_llm_to_determine_hangup and not self.turn_based_conversation:
                 answer = await self.tools["llm_agent"].check_for_completion(self.history, self.check_for_completion_prompt)
                 should_hangup = answer['answer'].lower() == "yes"
@@ -1348,6 +1353,8 @@ class TaskManager(BaseManager):
 
                             if not self.first_message_passed:
                                 logger.info(f"Adding to transcrber message")
+                                logger.info(f"Self Started transmitting audio : {self.started_transmitting_audio}")
+                                logger.info(f"Self first message passed : {self.first_message_passed}")
                                 self.transcriber_message += message['data']
                                 continue
 
@@ -1358,7 +1365,7 @@ class TaskManager(BaseManager):
                             
                             # This means we are generating response from an interim transcript 
                             # Hence we transmit quickly 
-                            if not self.started_transmitting_audio:
+                            if not self.started_transmitting_audio and not self.first_message_passed:
                                 logger.info("##### Haven't started transmitting audio and hence cleaning up downstream tasks")
                                 await self.__cleanup_downstream_tasks()
                             else:
