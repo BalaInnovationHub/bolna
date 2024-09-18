@@ -1376,7 +1376,7 @@ class TaskManager(BaseManager):
                                 logger.info(f"Started transmitting and hence moving fursther")
                             
                             # If we've started transmitting audio this is probably an interruption, so calculate number of words
-                            if self.started_transmitting_audio and self.number_of_words_for_interruption != 0 and self.first_message_passed:
+                            if self.started_transmitting_audio and self.number_of_words_for_interruption != 0 and self.first_message_passed and self.first_message_sent:
                                 if num_words > self.number_of_words_for_interruption or message['data'].strip() in self.accidental_interruption_phrases:
                                     #Process interruption only if number of words is higher than the threshold 
                                     logger.info(f"###### Number of words {num_words} is higher than the required number of words for interruption, hence, definitely interrupting. Interruption and hence changing the turn id")
@@ -1525,7 +1525,10 @@ class TaskManager(BaseManager):
         meta_info = copy.deepcopy(meta_info)
         logger.info(f"In the send preprocessed audio function , message passed check : {self.first_message_passed}")
         logger.info(f"In the send preprocessed audio function, message sent is : {self.first_message_sent}")
-        yield_in_chunks = self.yield_chunks if self.first_message_passed == True and self.first_message_sent == True else False
+        if not self.first_message_passed and not self.first_message_sent:
+            yield_in_chunks = None
+        else:
+            yield_in_chunks = self.yield_chunks
         try:
             #TODO: Either load IVR audio into memory before call or user s3 iter_cunks
             # This will help with interruption in IVR
@@ -1727,7 +1730,7 @@ class TaskManager(BaseManager):
 
                     num_chunks = 0
                     self.turn_id +=1
-                    if not self.first_message_passed and self.first_message_sent: # only true when the first message is completly sent
+                    if not self.first_message_passed and self.first_message_sent and self.synthesizer_queue.empty(): # only true when the first message is completly sent
                         self.first_message_passed = True
                         logger.info(f"Making first message passed as True")
                         self.first_message_passing_time = time.time()
@@ -1860,6 +1863,14 @@ class TaskManager(BaseManager):
                 tasks = [asyncio.create_task(self.tools['input'].handle())]
                 if not self.turn_based_conversation:
                     self.background_check_task = asyncio.create_task(self.__handle_initial_silence(duration = 15))
+
+
+                if not self.first_message_passed and not self.first_message_sent:
+                    logger.info(f"Sending first message")
+
+
+
+
                 if "transcriber" in self.tools:
                     tasks.append(asyncio.create_task(self._listen_transcriber()))
                     self.transcriber_task = asyncio.create_task(self.tools["transcriber"].run())
@@ -1881,7 +1892,6 @@ class TaskManager(BaseManager):
                 self.output_task = asyncio.create_task(self.__process_output_loop())
                 if not self.turn_based_conversation or self.enforce_streaming:
                     logger.info(f"Setting up other servers")
-                    self.first_message_task = asyncio.create_task(self.__first_message())
                     #if not self.use_llm_to_determine_hangup :
                     # By default we will hang up after x amount of silence
                     # We still need to
