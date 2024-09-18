@@ -303,7 +303,10 @@ class TaskManager(BaseManager):
                 self.number_of_words_for_interruption = self.conversation_config.get("number_of_words_for_interruption", 3)
                 self.asked_if_user_is_still_there = False #Used to make sure that if user's phrase qualifies as acciedental interruption, we don't break the conversation loop
                 self.first_message_passed = True if self.task_config["tools_config"]["output"]["provider"] == 'default' else False
-                logger.info(f"First message passed logger here : {self.first_message_passed}")
+                logger.info(f"First message passed initialized : {self.first_message_passed}")
+                self.first_message_sent = False
+                logger.info(f"First message sent initialized : {self.first_message_sent}")
+
                 self.started_transmitting_audio = False
                 self.accidental_interruption_phrases = set(ACCIDENTAL_INTERRUPTION_PHRASES)
                 #self.interruption_backoff_period = 1000 #conversation_config.get("interruption_backoff_period", 300) #this is the amount of time output loop will sleep before sending next audio
@@ -1520,7 +1523,9 @@ class TaskManager(BaseManager):
 
     async def __send_preprocessed_audio(self, meta_info, text):
         meta_info = copy.deepcopy(meta_info)
-        yield_in_chunks = self.yield_chunks if self.first_message_passed == True else False
+        logger.info(f"In the send preprocessed audio function , message passed check : {self.first_message_passed}")
+        logger.info(f"In the send preprocessed audio function, message sent is : {self.first_message_sent}")
+        yield_in_chunks = self.yield_chunks if self.first_message_passed == True and self.first_message_sent == True else False
         try:
             #TODO: Either load IVR audio into memory before call or user s3 iter_cunks
             # This will help with interruption in IVR
@@ -1722,7 +1727,7 @@ class TaskManager(BaseManager):
 
                     num_chunks = 0
                     self.turn_id +=1
-                    if not self.first_message_passed:
+                    if not self.first_message_passed and self.first_message_sent: # only true when the first message is completly sent
                         self.first_message_passed = True
                         logger.info(f"Making first message passed as True")
                         self.first_message_passing_time = time.time()
@@ -1807,6 +1812,10 @@ class TaskManager(BaseManager):
                         logger.info(f"Generating {text}")
                         meta_info = {'io': self.tools["output"].get_provider(), 'message_category': 'agent_welcome_message', 'stream_sid': stream_sid, "request_id": str(uuid.uuid4()), "cached": True, "sequence_id": -1, 'format': self.task_config["tools_config"]["output"]["format"], 'text': text}
                         await self._synthesize(create_ws_data_packet(text, meta_info=meta_info))
+
+                        # If this doesn't work, we need to make sure the syntehesizer pass the agentic message text
+
+                        self.first_message_sent = True
                         break
                     else:
                         logger.info(f"Stream id is still None, so not passing it")
