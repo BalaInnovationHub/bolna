@@ -1732,10 +1732,11 @@ class TaskManager(BaseManager):
                     self.turn_id +=1
 
                     if not self.first_message_passed and self.first_message_sent: # only true when the first message is completly sent
-                        while not self.buffered_output_queue.empty():
-                            logger.info("Waiting for the synthesizer queue to empty")
-                            await asyncio.sleep(0.1)  # Sleep for a short duration before checking again
-            
+
+
+                        #TODO: Need to add a check here to make sure, we don't make self.first_message_passed as True until and unless the response from the synthesizer is not empty
+
+
                         self.first_message_passed = True
                         logger.info(f"Making first message passed as True")
                         self.first_message_passing_time = time.time()
@@ -1894,7 +1895,7 @@ class TaskManager(BaseManager):
                         traceback.print_exc()
                     
                 logger.info(f"Starting the first message task {self.enforce_streaming}")
-                self.output_task = asyncio.create_task(self.__process_output_loop())
+                # self.output_task = asyncio.create_task(self.__process_output_loop())
                 if not self.turn_based_conversation or self.enforce_streaming:
                     logger.info(f"Setting up other servers")
                     #if not self.use_llm_to_determine_hangup :
