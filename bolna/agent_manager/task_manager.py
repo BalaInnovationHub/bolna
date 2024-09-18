@@ -738,7 +738,7 @@ class TaskManager(BaseManager):
 
         if not self.first_message_passed and not self.first_message_sent:
             logger.info(f"First message not sent, not doing any cleanup")
-            continue
+            return
 
         start_time = time.time()
         await self.tools["output"].handle_interruption()
