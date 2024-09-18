@@ -1867,7 +1867,8 @@ class TaskManager(BaseManager):
 
                 if not self.first_message_passed and not self.first_message_sent:
                     logger.info(f"Sending first message")
-
+                    self.first_message_task = asyncio.create_task(self.__first_message())
+                    await self.first_message_task
 
 
 
