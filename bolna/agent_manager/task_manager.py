@@ -735,6 +735,11 @@ class TaskManager(BaseManager):
 
     async def __cleanup_downstream_tasks(self):
         logger.info(f"Cleaning up downstream task")
+
+        if not self.first_message_passed and not self.first_message_sent:
+            logger.info(f"First message not sent, not doing any cleanup")
+            continue
+
         start_time = time.time()
         await self.tools["output"].handle_interruption()
         self.sequence_ids = {-1} 
