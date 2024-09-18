@@ -303,6 +303,7 @@ class TaskManager(BaseManager):
                 self.number_of_words_for_interruption = self.conversation_config.get("number_of_words_for_interruption", 3)
                 self.asked_if_user_is_still_there = False #Used to make sure that if user's phrase qualifies as acciedental interruption, we don't break the conversation loop
                 self.first_message_passed = True if self.task_config["tools_config"]["output"]["provider"] == 'default' else False
+                logger.info(f"First message passed logger here : {self.first_message_passed}")
                 self.started_transmitting_audio = False
                 self.accidental_interruption_phrases = set(ACCIDENTAL_INTERRUPTION_PHRASES)
                 #self.interruption_backoff_period = 1000 #conversation_config.get("interruption_backoff_period", 300) #this is the amount of time output loop will sleep before sending next audio
